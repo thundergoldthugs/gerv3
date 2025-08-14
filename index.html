@@ -22,7 +22,7 @@
   body{
     margin:0;background:radial-gradient(1200px 600px at 80% -10%,#20265b 0%,var(--bg) 60%),
              radial-gradient(900px 700px at -10% 110%,#1a214d 0%,var(--bg) 60%);
-    color:var(--text);font:16px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+    color:var(--text);font:16px/1.35 system-ui,-apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
     display:flex;flex-direction:column;min-height:100%;padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)
   }
 
@@ -331,6 +331,114 @@ const heatEl=document.getElementById('heat');
 const audioToggle=document.getElementById('audioToggle');
 const toggleImages=document.getElementById('toggleImages');
 
+/* ===== import / export wiring ===== */
+const importText = document.getElementById('importText');
+const importBtn = document.getElementById('importBtn');
+const appendSampleBtn = document.getElementById('appendSample');
+const exportTSVBtn = document.getElementById('exportTSV');
+const exportJSONBtn = document.getElementById('exportJSON');
+const importJSONBtn = document.getElementById('importJSON');
+const jsonFile = document.getElementById('jsonFile');
+const swapOnImport = document.getElementById('swapOnImport');
+
+function parseLinesToPairs(text, { swap=false } = {}) {
+  const out = [];
+  const lines = (text || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  for (const raw of lines) {
+    // accept: "Haus - house #home", "gehen : to go", "der Tisch, the table #furniture", "Buch\tbook\t#basic"
+    const parts = raw.split(/\t| - | : |, /);
+    if (parts.length < 2) continue;
+    let left = parts[0].trim();
+    let right = parts[1].trim();
+    // tags anywhere in the line
+    const tags = Array.from(raw.matchAll(/#([\p{L}\p{N}_-]+)/gu)).map(m => m[1]);
+    const de = swap ? right : left;
+    const en = swap ? left : right;
+    if (!de || !en) continue;
+    out.push({ de, en, box:1, dueAt:0, tags: tags.length? tags : [] });
+  }
+  return out;
+}
+
+function mergeIntoDeck(newPairs) {
+  // avoid dupes (by normalized de+en)
+  const sig = (p) => `${p.de}||${p.en}`.toLowerCase().trim();
+  const seen = new Set(deck.map(sig));
+  const toAdd = [];
+  for (const p of newPairs) {
+    if (!seen.has(sig(p))) { toAdd.push(p); seen.add(sig(p)); }
+  }
+  if (toAdd.length) {
+    deck = deck.concat(toAdd);
+    saveDeck(deck);
+    refreshTagSelect();
+  }
+  return toAdd.length;
+}
+
+appendSampleBtn.onclick = () => {
+  const sample = [
+    "die Katze - the cat #animals",
+    "die Stadt - the city #places",
+    "schwierig - difficult #adjectives",
+    "das Wasser - water #food",
+    "schnell - fast #adjectives",
+    "der Stuhl - the chair #home",
+    "die Frage - the question #basic",
+    "antworten - to answer #verbs",
+    "denken - to think #verbs",
+    "das Wetter - weather #nature"
+  ].join("\n");
+  importText.value = (importText.value ? importText.value + "\n" : "") + sample;
+};
+
+importBtn.onclick = () => {
+  const swap = !!swapOnImport.checked;
+  const pairs = parseLinesToPairs(importText.value, { swap });
+  const added = mergeIntoDeck(pairs);
+  if (added === 0) {
+    alert("No new cards parsed (maybe duplicates or format issues).");
+  } else {
+    alert(`Imported ${added} cards.`);
+  }
+  buildRound({ shuffleQ:true });
+};
+
+exportTSVBtn.onclick = () => {
+  const tsv = deck.map(d => [d.de, d.en, (d.tags||[]).map(t=>`#${t}`).join(' ')].join("\t")).join("\n");
+  const blob = new Blob([tsv], { type:'text/tab-separated-values;charset=utf-8' });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'german_deck.tsv' });
+  document.body.appendChild(a); a.click(); a.remove();
+};
+
+exportJSONBtn.onclick = () => {
+  const blob = new Blob([JSON.stringify(deck, null, 2)], { type:'application/json;charset=utf-8' });
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'german_deck.json' });
+  document.body.appendChild(a); a.click(); a.remove();
+};
+
+importJSONBtn.onclick = () => jsonFile.click();
+jsonFile.onchange = async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const arr = JSON.parse(text);
+    const cleaned = Array.isArray(arr) ? arr.filter(v => v && v.de && v.en).map(v => ({
+      de: String(v.de), en: String(v.en),
+      box: Number(v.box)||1, dueAt: 0, // reset schedule on import
+      tags: Array.isArray(v.tags) ? v.tags : []
+    })) : [];
+    const added = mergeIntoDeck(cleaned);
+    alert(`Imported ${added} new cards.`);
+    buildRound({ shuffleQ:true });
+  } catch (err) {
+    alert('Failed to import JSON: ' + (err?.message||err));
+  } finally {
+    jsonFile.value = '';
+  }
+};
+
 /* ===== build rounds ===== */
 function buildRound({shuffleQ=true,fromMissed=false}={}){
   clearTimer();
@@ -382,7 +490,7 @@ function renderCard(){
     frontTag.textContent="Pick the correct meaning";backTag.textContent="";
     frontWord.textContent=pair.de;backWord.textContent="";
     buildChoices(pair);
-    if(dir==="time"){startTimer();heartsEl.classList.remove('hidden');timerEl.classList.remove('hidden')}
+    if(dir==="time"){startTimer();hearts=3;heartsEl.textContent="♥".repeat(hearts);heartsEl.classList.remove('hidden');timerEl.classList.remove('hidden')}
     else{clearTimer();heartsEl.classList.add('hidden');timerEl.classList.add('hidden')}
     if(autoAudio) speak(pair.de,'de');
     renderImage(pair.en);
@@ -453,13 +561,20 @@ async function searchCommons(term){
   };
 }
 
+function withTimeout(promise, ms=1800){
+  let to; return Promise.race([
+    promise,
+    new Promise((_,rej)=>{ to=setTimeout(()=>rej(new Error('timeout')),ms); })
+  ]).finally(()=>clearTimeout(to));
+}
+
 async function fetchImage(english){
   const key = normTerm(english);
   if(IMG_CACHE[key]) return IMG_CACHE[key];
 
   let data=null;
-  try { data = await searchOpenverse(key); }
-  catch(e){ try { data = await searchCommons(key); } catch(e2){ data=null; } }
+  try { data = await withTimeout(searchOpenverse(key)); }
+  catch(e){ try { data = await withTimeout(searchCommons(key)); } catch(e2){ data=null; } }
 
   if(data){
     IMG_CACHE[key]=data;
@@ -479,18 +594,33 @@ async function renderImage(english){
 
 /* ===== choices (MC) ===== */
 function buildChoices(pair){
-  const wrong=deck.filter(d=>d.en!==pair.en && (!activeTag || (d.tags||[]).includes(activeTag)));
-  const choices=shuffle([pair.en,...sample(wrong.map(d=>d.en),3)]);
-  mcArea.innerHTML=""; mcArea.classList.remove('hidden');
-  choices.forEach(ch=>{
-    const div=document.createElement('div'); div.className='choice'; div.textContent=ch;
-    div.onclick=()=>{
-      if(ch===pair.en){div.classList.add('correct'); markGood(true)}
-      else{div.classList.add('wrong'); hearts=Math.max(0,hearts-1); heartsEl.textContent="♥".repeat(hearts); markAgain(true)}
-      setTimeout(()=>next(),280)
+  const wrong = deck.filter(d => d.en !== pair.en && (!activeTag || (d.tags||[]).includes(activeTag)));
+  const choices = shuffle([pair.en, ...sample(wrong.map(d=>d.en), Math.min(3, Math.max(0, wrong.length)))]);
+  mcArea.innerHTML = ""; mcArea.classList.remove('hidden');
+  choices.forEach(ch => {
+    const div = document.createElement('button');
+    div.className = 'choice';
+    div.type = 'button';
+    div.setAttribute('role','button');
+    div.setAttribute('aria-pressed','false');
+    div.textContent = ch;
+    div.onclick = () => {
+      if (ch === pair.en) {
+        div.classList.add('correct');
+        div.setAttribute('aria-pressed','true');
+        markGood(true);
+      } else {
+        div.classList.add('wrong');
+        div.setAttribute('aria-pressed','true');
+        hearts = Math.max(0, hearts - 1);
+        heartsEl.textContent = "♥".repeat(hearts);
+        markAgain(true);
+        if (hearts === 0 && modeSel.value === 'time') { clearTimer(); endRound(); return; }
+      }
+      setTimeout(()=>next(), 280);
     };
     mcArea.appendChild(div);
-  })
+  });
 }
 
 /* ===== progress & nav ===== */
@@ -597,12 +727,27 @@ document.getElementById('againBtn').onclick = ()=>{ const isMC=(modeSel.value===
 document.getElementById('goodBtn').onclick  = ()=>{ const isMC=(modeSel.value==="mc"||modeSel.value==="time"); if(isMC){ markGood(true); next(); } else { markGood(); next(); } };
 document.getElementById('flipBtn').onclick  = ()=>{ const isMC=(modeSel.value==="mc"||modeSel.value==="time"); if(isMC){ next(); } else { flip(); } };
 
+/* ===== keyboard shortcuts =====
+   Space = Flip/Skip, Left = Again, Right = Got it */
+window.addEventListener('keydown', (e) => {
+  if (e.target && /input|textarea|select/i.test(e.target.tagName)) return;
+  if (e.key === ' ') { e.preventDefault(); document.getElementById('flipBtn').click(); }
+  else if (e.key === 'ArrowLeft') { document.getElementById('againBtn').click(); }
+  else if (e.key === 'ArrowRight') { document.getElementById('goodBtn').click(); }
+});
+
 /* ===== examples (optional local JSON) ===== */
 let EX_CACHE=null, EX_LOADED=false;
 async function loadExamples(){ if(EX_CACHE) return EX_CACHE;
   try{const cached=localStorage.getItem(EX_LS_KEY); if(cached){EX_CACHE=JSON.parse(cached); EX_LOADED=true; return EX_CACHE;} }catch(e){}
-  try{const res=await fetch('/data/examples.json',{cache:'no-cache'}); if(!res.ok) throw 0; EX_CACHE=await res.json(); EX_LOADED=true; try{localStorage.setItem(EX_LS_KEY,JSON.stringify(EX_CACHE))}catch(e){} return EX_CACHE;}
-  catch(e){EX_CACHE={};EX_LOADED=false;return EX_CACHE;}
+  try{
+    // relative path so it works on GitHub project pages
+    const base = (document.querySelector('base')?.href) || (location.pathname.endsWith('/') ? location.pathname : location.pathname.replace(/[^/]+$/,''));
+    const res = await fetch(`${base}data/examples.json`, { cache:'no-cache' });
+    if(!res.ok) throw 0; EX_CACHE=await res.json(); EX_LOADED=true;
+    try{localStorage.setItem(EX_LS_KEY,JSON.stringify(EX_CACHE))}catch(e){}
+    return EX_CACHE;
+  } catch(e){EX_CACHE={};EX_LOADED=false;return EX_CACHE;}
 }
 function normKey(s){return (s||"").toLowerCase().replace(/^[\s]*(der|die|das|ein|eine|einen|einem|einer)\s+/,'').replace(/[().,!?;:"'«»„”“]/g,'').trim()}
 async function findExamplesFor(text){
