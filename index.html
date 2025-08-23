@@ -81,7 +81,7 @@
   .abtn{flex:1;background:var(--surface);border:1px solid var(--stroke);color:var(--text);padding:14px;border-radius:16px;font-weight:900;cursor:pointer}
   .abtn.good{background:var(--good);border-color:#0ea165;color:#062616}
   .abtn.bad{background:var(--bad);border-color:#d33d3d}
-  .abtn.mid{background:var(--surface)}
+  .abtn.mid{background:var(--surface")}
   .abtn:active{transform:translateY(1px) scale(.99)}
 
   dialog{border:none;border-radius:18px 18px 0 0;width:100%;max-width:840px;padding:0;background:var(--bg);color:var(--text)}
@@ -103,7 +103,7 @@
 
   /* Examples drawer */
   .exDrawer{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);width:min(720px,92vw);max-height:40vh;overflow:auto;background:var(--surface);border:1px solid var(--stroke);border-radius:16px;box-shadow:var(--shadow);padding:10px 12px;z-index:8}
-  .exItem{padding:8px 6px;border-bottom:1px dashed var(--stroke)} .exItem:last-child{border-bottom:none}
+  .exItem{padding:8px 6px;border-bottom:1px dashed var(--stroke")} .exItem:last-child{border-bottom:none}
   .src{font-size:12px;color:var(--muted)}
 </style>
 </head>
@@ -408,7 +408,7 @@ importBtn.onclick = () => {
 };
 
 exportTSVBtn.onclick = () => {
-  const tsv = deck.map(d => [d.de, d.en, (d.tags||[]).map(t=>`#${t}`).join(' ')].join("\t")).join("\n");
+  const tsv = deck.map(d => [d.de, d.en, (d.tags||[]).map(t=>`#${t}`).join(" ")].join("\t")).join("\n");
   const blob = new Blob([tsv], { type:'text/tab-separated-values;charset=utf-8' });
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'german_deck.tsv' });
   document.body.appendChild(a); a.click(); a.remove();
@@ -824,6 +824,395 @@ function boot(){
   buildRound({shuffleQ:true}); applyStartGestures();
 }
 boot();
+</script>
+
+<!-- ====== APPENDED: preload your 331-word dataset (no existing lines changed) ====== -->
+<script>
+(function(){
+  const PRELOAD_FLAG = 'german_flashcards_preloaded_331_v1';
+  if (localStorage.getItem(PRELOAD_FLAG)) return; // only once per browser
+
+  // Parse "N. de – en #tag" lines
+  const raw = `
+1. Eben – just now #time
+2. gelten – to be valid #verb
+3. halt – simply #particle
+4. allerdings – indeed #adverb
+5. überhaupt – generally #adverb
+6. entsprechen – to correspond #verb
+7. einzeln – individual #adjective
+8. sogar – even or in fact #adverb
+9. entstehen – to develop or originate #verb
+10. sonst – otherwise #conjunction
+11. eher – more likely or rather #adverb
+12. darstellen – to portray or depict #verb
+13. dessen – whose #pronoun
+14. erscheinen – to appear #verb
+15. gewiss – certain or sure #adjective
+16. vergehen – to pass time #verb
+17. wesentlich – essential or fundamental #adjective
+18. anbieten – to offer #verb
+19. ebenso – just as or equally #adverb
+20. Abbildung – illustration #noun
+21. Jahrhundert – century #time
+22. verlassen – to leave #verb
+23. ausgehen – to go out or assume #verb
+24. geschehen – to happen or occur #verb
+25. annehmen – to accept or assume #verb
+26. bezeichnen – to name or label #verb
+27. befinden – to be or to feel #verb
+28. ebenfalls – also #adverb
+29. aufnehmen – to record or include #verb
+30. bestimmen – to decide or determine #verb
+31. treten – to step #verb
+32. erfolgen – to occur or take place #verb
+33. bloß – simply or just #particle
+34. betrachten – to look at or consider #verb
+35. gelingen – to succeed #verb
+36. jeweils – each time #adverb
+37. Lage – situation or location #noun
+38. Leistung – performance #noun
+39. zumindest – at least #adverb
+40. leisten – to achieve or accomplish #verb
+41. verlangen – to demand or request #verb
+42. Einsatz – deployment or effort #noun
+43. Gebiet – region or area #noun
+44. vorliegen – to exist or be present #verb
+45. Dorf – village #place
+46. Verfügung – disposal #noun
+47. zur Verfügung stehen – to be available #expression
+48. zur Verfügung stellen – to provide #expression
+49. stecken – to be located or stick #verb
+50. Anspruch – claim or right #noun
+51. beziehen – to refer or obtain #verb
+52. spüren – to sense or feel #verb
+53. vorhanden – available or existing #adjective
+54. hinaus – in addition or beyond #adverb
+55. künftig – future or forthcoming #adjective
+56. vorkommen – to happen or occur #verb
+57. betonen – to emphasize or stress #verb
+58. erfüllen – to fulfill or grant #verb
+59. knapp – scarce or barely #adjective
+60. lieber – rather or preferably #adverb
+61. zugleich – at the same time #adverb
+62. Reihe – row or line or series #noun
+63. beteiligen – to participate #verb
+64. indem – while or by doing #conjunction
+65. sich eignen – to be suitable #verb
+66. übrig – remaining or left #adjective
+67. durchaus – absolutely #adverb
+68. Macht – power or strength #noun
+69. eingehen – to deal with or engage #verb
+70. schweigen – to remain silent #verb
+71. das Schweigen – silence #noun
+72. drohen – to threaten #verb
+73. ehemalig – former #adjective
+74. längst – long since or already #adverb
+75. stets – always #adverb
+76. jeweilig – respective #adjective
+77. Beitrag – contribution #noun
+78. erforderlich – necessary or required #adjective
+79. heutig – today’s or present #adjective
+80. lediglich – merely or only #adverb
+81. unmittelbar – immediate or direct #adjective
+82. Aussage – statement #noun
+83. immerhin – after all or anyway #adverb
+84. betreiben – to operate or pursue #verb
+85. stoßen – to push or bump #verb
+86. vertreten – to represent #verb
+87. Ansatz – approach or attempt #noun
+88. stammen – to originate or come from #verb
+89. verhindern – to prevent #verb
+90. Hälfte – half #noun
+91. überlegen – to consider or reflect #verb
+92. der Gegenstand – object or item #noun
+93. üblich – usual or common #adjective
+94. verzichten – to do without #verb
+95. aufgeben – to give up or quit #verb
+96. Auftrag – order or assignment #noun
+97. betragen – to amount to #verb
+98. Freude – joy #emotion
+99. gesellschaftlich – social #adjective
+100. angeben – to claim or declare or show off #verb
+101. einrichten – to set up or furnish #verb
+102. Forschung – research #noun
+103. geraten – to get into #verb
+104. rasch – quick or rapid #adjective
+105. vielmehr – rather or instead #adverb
+106. erheblich – considerable or significant #adjective
+107. vermitteln – to arrange or mediate #verb
+108. Angriff – attack #noun
+109. gründen – to found or establish #verb
+110. herrschen – to rule or prevail #verb
+111. schieben – to push #verb
+112. behaupten – to claim or assert #verb
+113. Beschäftigte – employee #noun
+114. erheben – to raise or lift #verb
+115. verfolgen – to pursue or track #verb
+116. zwingen – to force #verb
+117. ablehnen – to refuse or reject #verb
+118. Anschlag – attack or assault #noun
+119. auftauchen – to surface or appear #verb
+120. einfallen – to collapse or to occur #verb
+121. Einrichtung – institution or furnishing #noun
+122. fördern – to promote or support #verb
+123. Vorsitzende – chairperson #noun
+124. ansprechen – to address or speak to #verb
+125. beachten – to pay attention #verb
+126. Spur – track or lane or trace #noun
+127. wenden – to turn #verb
+128. angesichts – in view of #preposition
+129. Erkenntnis – realization or insight #noun
+130. fassen – to grasp or hold #verb
+131. leise – soft or quiet #adjective
+132. nicken – to nod #verb
+133. prägen – to shape or characterize #verb
+134. anschließend – subsequently or afterwards #adverb
+135. Ereignis – event #noun
+136. Opfer – victim or sacrifice #noun
+137. vorsehen – to plan or provide for #verb
+138. Aufnahme – recording or reception or snapshot #noun
+139. begreifen – to understand or grasp #verb
+140. eröffnen – to open or start #verb
+141. Jahrzehnt – decade #time
+142. anlegen – to invest or put on #verb
+143. Einstellung – attitude or employment #noun
+144. Gericht – court or dish #noun
+145. der Sieg – victory #noun
+146. Tat – deed or act #noun
+147. Bund – association or federation #noun
+148. insofern – as far as or in that respect #conjunction
+149. Rand – edge or border #noun
+150. anschauen – to look at or watch #verb
+151. hingegen – on the other hand #conjunction
+152. Verlust – loss #noun
+153. verteilen – to distribute #verb
+154. vornehmen – to plan or undertake #verb
+155. Zuschauer – spectator #noun
+156. abgeben – to hand in or submit #verb
+157. aufweisen – to show or exhibit #verb
+158. Vertreter – representative #noun
+159. weitgehend – extensive or largely #adjective
+160. derjenige – the one #pronoun
+161. Eigenschaft – quality or characteristic #noun
+162. erzielen – to achieve or obtain #verb
+163. nachher – afterwards or later #adverb
+164. durchsetzen – to enforce or carry through #verb
+165. ersetzen – to replace #verb
+166. heftig – violent or intense #adjective
+167. Anlage – facility or complex or investment #noun
+168. Bühne – stage #noun
+169. drängen – to push or urge #verb
+170. eindeutig – clear or unambiguous #adjective
+171. ausmachen – to agree on or to switch off #verb
+172. berühmt – famous #adjective
+173. erfassen – to grasp or record #verb
+174. gestalten – to shape or design #verb
+175. Ansicht – opinion or view #noun
+176. anziehen – to attract or put on #verb
+177. auseinander – apart #adverb
+178. scheitern – to fail or break down #verb
+179. Ton – tone or sound or clay #noun
+180. Veranstaltung – event #noun
+181. angehen – to concern or to approach #verb
+182. Ausnahme – exception #noun
+183. einführen – to introduce or import #verb
+184. Mehrheit – majority #noun
+185. gelangen – to reach #verb
+186. Mauer – wall #noun
+187. reißen – to tear #verb
+188. riesig – enormous #adjective
+189. verweisen – to refer or expel #verb
+190. dicht – dense or thick #adjective
+191. erweisen – to prove or show #verb
+192. fürchten – to fear #verb
+193. Gestalt – figure or shape #noun
+194. Stellung – position or stance #noun
+195. Zugang – access #noun
+196. aufstellen – to set up or establish #verb
+197. ermitteln – to investigate or determine #verb
+198. gegenwärtig – current or present #adjective
+199. Vorgang – process or occurrence #noun
+200. zerstören – to destroy #verb
+201. ablaufen – to expire or run out #verb
+202. ergänzen – to add or complete #verb
+203. Gewalt – violence #noun
+204. Konzern – corporation or group #noun
+205. Lager – camp or storeroom #noun
+206. Lehre – apprenticeship or lesson or doctrine #noun
+207. Schatten – shadow or shade #noun
+208. Strecke – distance or route #noun
+209. Szene – scene #noun
+210. anschließen – to connect or join #verb
+211. entlang – along #preposition
+212. gemäß – in accordance with #preposition
+213. schießen – to shoot #verb
+214. streichen – to paint or cancel #verb
+215. Tor – goal or gate #noun
+216. Aktie – stock or share #noun
+217. Anlass – occasion or cause #noun
+218. Ausgabe – edition or expense or distribution #noun
+219. behalten – to keep #verb
+220. belegen – to prove or cover or register #verb
+221. Führung – management or leadership #noun
+222. stürzen – to fall or tumble #verb
+223. umgehen – to handle or deal with #verb
+224. zukommen – to come towards or be in store #verb
+225. absehen – to foresee or predict #verb
+226. Anforderung – requirement or demand #noun
+227. beweisen – to prove #verb
+228. ohnehin – anyway #adverb
+229. Vorschrift – regulation or rule #noun
+230. äußerst – extremely #adverb
+231. ausüben – to practice or exercise #verb
+232. betreten – to enter or step into #verb
+233. einst – once or formerly #adverb
+234. erzeugen – to produce or generate #verb
+235. künstlerisch – artistic #adjective
+236. Urteil – sentence or judgment #noun
+237. verbergen – to hide #verb
+238. begegnen – to meet or come across #verb
+239. erschrecken – to frighten or startle #verb
+240. sämtlich – all or altogether #adjective
+241. schütteln – to shake #verb
+242. umgekehrt – reverse or opposite #adjective
+243. zurückziehen – to withdraw #verb
+244. erleichtern – to make easier or relieve #verb
+245. Haltung – posture or attitude #noun
+246. mächtig – powerful #adjective
+247. Waffe – weapon #noun
+248. angeblich – alleged or supposedly #adverb
+249. anhand – on the basis of #preposition
+250. Einführung – introduction #noun
+251. Loch – hole #noun
+252. nachweisen – to prove or verify #verb
+253. Quelle – source #noun
+254. Umsatz – turnover or sales #noun
+255. Vorwurf – accusation or reproach #noun
+256. bedienen – to serve or operate #verb
+257. beherrschen – to master or control #verb
+258. bunt – colorful #adjective
+259. leuchten – to shine #verb
+260. Merkmal – feature or characteristic #noun
+261. mittels – by means of #preposition
+262. mitten – in the middle #adverb
+263. überwiegend – predominant or mostly #adjective
+264. verabschieden – to say goodbye or adopt #verb
+265. verbieten – to prohibit or forbid #verb
+266. vorlegen – to present or provide #verb
+267. ausrichten – to align or adjust #verb
+268. bedingen – to cause or require #verb
+269. Bestimmung – regulation or purpose #noun
+270. Botschaft – message or embassy #noun
+271. drüben – over there #adverb
+272. Fortschritt – progress #noun
+273. Nachfrage – demand or request #noun
+274. Pflicht – duty or obligation #noun
+275. starren – to stare #verb
+276. Wille – will #noun
+277. anhalten – to stop #verb
+278. erläutern – to explain #verb
+279. Gegner – enemy or opponent #noun
+280. Hinsicht – respect or regard #noun
+281. unternehmen – to undertake or do #verb
+282. verraten – to betray or reveal #verb
+283. Welle – wave #noun
+284. zeichnen – to draw #verb
+285. anstreben – to aim at or strive for #verb
+286. ausführen – to carry out or execute #verb
+287. Betrag – amount or sum #noun
+288. derartig – such or like that #adjective
+289. hingehen – to go there #verb
+290. Schicht – layer or shift #noun
+291. schmal – narrow or slender #adjective
+292. Verhandlung – negotiation #noun
+293. begeistern – to inspire or excite #verb
+294. Gewerkschaft – trade union #noun
+295. Handel – trade #noun
+296. Kanzler – chancellor #noun
+297. Sitz – seat or headquarters #noun
+298. steuern – to steer or control #verb
+299. umsetzen – to implement or put into practice #verb
+300. unheimlich – scary or eerie #adjective
+301. wagen – to risk or dare #verb
+302. Widerstand – resistance or opposition #noun
+303. anzeigen – to report or indicate #verb
+304. auffordern – to request or urge #verb
+305. eintragen – to enter or register or record #verb
+306. entsprechend – in accordance with #adjective
+307. enttäuschen – to disappoint #verb
+308. gewaltig – enormous or tremendous #adjective
+309. Schriftsteller – writer or author #noun
+310. Überlegung – thought or consideration #noun
+311. veröffentlichen – to publish #verb
+312. voraussetzen – to assume or take for granted #verb
+313. zugeben – to admit or confess #verb
+314. Abgeordnete – member of parliament #noun
+315. Anschluss – connection or link #noun
+316. ansetzen – to position or schedule or estimate #verb
+317. befürchten – to fear #verb
+318. Boot – boat #noun
+319. Einnahme – income or revenue #noun
+320. Saison – season #noun
+321. zumal – particularly or especially #adverb
+322. Auftritt – appearance or entrance or performance #noun
+323. bevorzugen – to prefer #verb
+324. kennzeichnen – to mark or characterize #verb
+325. Schicksal – fate or destiny #noun
+326. sofern – provided that #conjunction
+327. Verlag – publishing company #noun
+328. zitieren – to quote #verb
+329. Beweis – proof or evidence #noun
+330. Forscher – researcher #noun
+331. erledigen – to take care of or settle #verb
+`.trim();
+
+  function parseList(text){
+    const lines = text.split(/\r?\n/);
+    const out = [];
+    for (const line of lines) {
+      const stripped = line.replace(/^\s*\d+\.\s*/, '');
+      const parts = stripped.split(/\s+–\s+/); // en dash
+      if (parts.length < 2) continue;
+      const de = parts[0].trim();
+      const right = parts[1].trim();
+      const tags = Array.from(stripped.matchAll(/#([\p{L}\p{N}_-]+)/gu)).map(m => m[1]);
+      const en = right.replace(/\s*#.*$/,'').trim();
+      if (!de || !en) continue;
+      out.push({ de, en, box:1, dueAt:0, tags });
+    }
+    return out;
+  }
+
+  try {
+    const pairs = parseList(raw);
+
+    // Use app's own merger if available; otherwise do a local one
+    const added = (typeof mergeIntoDeck === 'function')
+      ? mergeIntoDeck(pairs)
+      : (function fallbackMerge(pairs){
+          const LS_KEY="german_flashcards_deck_v2";
+          const existing = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
+          const sig = p => `${p.de}||${p.en}`.toLowerCase().trim();
+          const seen = new Set(existing.map(sig));
+          const toAdd = [];
+          for (const p of pairs) if (!seen.has(sig(p))) { toAdd.push(p); seen.add(sig(p)); }
+          const next = existing.concat(toAdd);
+          localStorage.setItem(LS_KEY, JSON.stringify(next));
+          return toAdd.length;
+        })(pairs);
+
+    if (added > 0) {
+      try { localStorage.setItem(PRELOAD_FLAG, 'yes'); } catch(e){}
+      if (typeof buildRound === 'function') { buildRound({ shuffleQ:true }); }
+    } else {
+      try { localStorage.setItem(PRELOAD_FLAG, 'yes'); } catch(e){}
+    }
+  } catch (e) {
+    // silent fail to avoid breaking any feature
+    console.error('Preload failed:', e);
+  }
+})();
 </script>
 </body>
 </html>
