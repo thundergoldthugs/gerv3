@@ -280,7 +280,7 @@ let deck=loadDeck(), stats=loadStats();
 if(deck.length===0){deck=[{de:"Haus",en:"house",box:1,dueAt:0,tags:["basic"]},{de:"gehen",en:"to go",box:1,dueAt:0,tags:["verbs"]},{de:"der Tisch",en:"the table",box:1,dueAt:0,tags:["home"]},{de:"schön",en:"beautiful",box:1,dueAt:0,tags:["adjectives"]},{de:"lernen",en:"to learn",box:1,dueAt:0,tags:["verbs"]},{de:"Buch",en:"book",box:1,dueAt:0,tags:["basic"]},{de:"sprechen",en:"to speak",box:1,dueAt:0,tags:["verbs"]},{de:"Freund",en:"friend",box:1,dueAt:0,tags:["people"]},{de:"Essen",en:"food",box:1,dueAt:0,tags:["food"]},{de:"trinken",en:"to drink",box:1,dueAt:0,tags:["verbs"]}];saveDeck(deck)}
 
 /* ===== SRS ===== */
-const INTERVALS={1:0,2:60*60*1000,3:24*60*60*1000,4:3*24*60*60*1000,5:7*24*60*60*1000,6:30*24*60*60*1000};
+const INTERVALS={1:0,2:60*60*1000,3:24*60*60*1000,4:3*24*60*60*1000,5:7*24*60*60*1000,6:30*24*60*1000};
 let activeTag="";function isDue(p){const tagOk=!activeTag||(p.tags||[]).includes(activeTag);return tagOk && (p.dueAt||0)<=now()}
 function schedule(p,ok){p.box=ok?Math.min((p.box||1)+1,6):1;p.dueAt=now()+(INTERVALS[p.box]||0)}
 
@@ -290,6 +290,9 @@ let hearts=3,timeLeft=60,timerId=null;
 let autoAudio=localStorage.getItem(LS_AUDIO)==="on";
 let imagesOn=(localStorage.getItem(LS_IMAGES) ?? "on")==="on";
 let IMG_CACHE={}; try{IMG_CACHE=JSON.parse(localStorage.getItem(LS_IMG_CACHE)||"{}")}catch(e){IMG_CACHE={};}
+
+/* NEW: track per-round lapses for better “Again” spacing */
+let lapses = new Map();
 
 /* ===== UI refs ===== */
 const progressBar=document.getElementById('progressBar');
@@ -451,6 +454,10 @@ function buildRound({shuffleQ=true,fromMissed=false}={}){
   queue=shuffleQ?shuffle([...base]):[...base];
   mixDir=queue.map(()=>Math.random()<0.5?"de-en":"en-de");
   pos=0;missed.clear();showingBack=false;
+
+  /* NEW: reset per-round lapse counters */
+  lapses.clear();
+
   updateProgress();renderCard();updateHeader();applyControlsForMode()
 }
 
@@ -641,7 +648,47 @@ function bump(correct){
   saveStats(); updateHeader();
 }
 function markGood(){const cur=current();if(!cur)return;const {idx,pair}=cur;schedule(pair,true);deck[idx]=pair;saveDeck(deck);bump(true)}
-function markAgain(){const cur=current();if(!cur)return;const {idx,pair}=cur;schedule(pair,false);deck[idx]=pair;saveDeck(deck);bump(false);missed.add(idx);const ins=Math.min(queue.length,pos+3);queue.splice(ins,0,idx)}
+
+/* ===== UPDATED “Again” spacing ===== */
+function markAgain(inMc=false){
+  const cur = current(); if (!cur) return;
+  const { idx, pair } = cur;
+
+  // Reset box and due time for inter-round SRS
+  schedule(pair, false);
+  deck[idx] = pair;
+  saveDeck(deck);
+
+  // stats bump (wrong)
+  bump(false);
+
+  // Track how many times this card has been missed in the current round
+  const count = (lapses.get(idx) || 0) + 1;
+  lapses.set(idx, count);
+
+  // Ensure there isn't another copy of this card later in the queue
+  for (let i = queue.length - 1; i > pos; i--) {
+    if (queue[i] === idx) queue.splice(i, 1);
+  }
+
+  // Determine spacing based on misses and remaining items
+  const remaining = Math.max(0, queue.length - pos - 1);
+  let frac = 0.3;           // 1st lapse → ~30% of remaining
+  if (count === 2) frac = 0.6;    // 2nd lapse → ~60%
+  else if (count >= 3) frac = 0.9; // 3rd+ lapse → ~90%
+
+  // Convert to a gap with a sensible minimum so it won't loop too soon
+  let gap = Math.max(5, Math.round(remaining * frac));
+  const ins = Math.min(queue.length, pos + 1 + gap);
+
+  // Reinsert once, farther away
+  queue.splice(ins, 0, idx);
+
+  // Track for end-of-round stats/badges
+  missed.add(idx);
+
+  // (In MC/time modes, caller already advances with next(); in flip modes, the button handlers call next() after this.)
+}
 
 /* ===== end round ===== */
 function endRound(){
